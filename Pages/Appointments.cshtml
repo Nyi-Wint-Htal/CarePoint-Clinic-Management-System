@@ -1,0 +1,671 @@
+
+@page
+@model ClinicManagementWeb.Pages.AppointmentsModel
+
+@{
+    ViewData["Title"] = "Appointments";
+
+    var totalAppointments = Model.AppointmentsList.Count;
+    var scheduledCount = Model.AppointmentsList.Count(a =>
+        string.Equals(a.Status, "Scheduled", StringComparison.OrdinalIgnoreCase));
+    var completedCount = Model.AppointmentsList.Count(a =>
+        string.Equals(a.Status, "Completed", StringComparison.OrdinalIgnoreCase));
+    var cancelledCount = Model.AppointmentsList.Count(a =>
+        string.Equals(a.Status, "Cancelled", StringComparison.OrdinalIgnoreCase));
+}
+
+<div class="appointments-page">
+
+    <div class="appointments-heading">
+        <div>
+            <div class="appointments-breadcrumb">
+                <span>CarePoint</span>
+                <span class="breadcrumb-separator">/</span>
+                <span>Management</span>
+            </div>
+            <h1>Appointments</h1>
+            <p>Schedule visits, coordinate care, and manage your clinic's appointments.</p>
+        </div>
+
+        <a href="#appointmentForm" class="appointment-primary-action">
+            <span aria-hidden="true">＋</span> Schedule appointment
+        </a>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["SuccessMessage"]
+            <button type="button" class="btn-close"
+                    data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @TempData["ErrorMessage"]
+            <button type="button" class="btn-close"
+                    data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="appointment-stats">
+        <div class="appointment-stat-card">
+            <div class="appointment-stat-icon stat-total">▦</div>
+            <div>
+                <span class="appointment-stat-label">Total appointments</span>
+                <strong>@totalAppointments</strong>
+                <small>All recorded visits</small>
+            </div>
+        </div>
+
+        <div class="appointment-stat-card">
+            <div class="appointment-stat-icon stat-scheduled">◷</div>
+            <div>
+                <span class="appointment-stat-label">Scheduled</span>
+                <strong>@scheduledCount</strong>
+                <small>Awaiting appointment</small>
+            </div>
+        </div>
+
+        <div class="appointment-stat-card">
+            <div class="appointment-stat-icon stat-completed">✓</div>
+            <div>
+                <span class="appointment-stat-label">Completed</span>
+                <strong>@completedCount</strong>
+                <small>Visits completed</small>
+            </div>
+        </div>
+
+        <div class="appointment-stat-card">
+            <div class="appointment-stat-icon stat-cancelled">×</div>
+            <div>
+                <span class="appointment-stat-label">Cancelled</span>
+                <strong>@cancelledCount</strong>
+                <small>Cancelled visits</small>
+            </div>
+        </div>
+    </div>
+
+    <section class="appointment-panel" id="appointmentForm">
+        <div class="appointment-panel-heading">
+            <div class="appointment-section-icon">＋</div>
+            <div>
+                <h2>@(Model.AppointmentId > 0 ? "Edit appointment" : "Schedule an appointment")</h2>
+                <p>
+                    @(Model.AppointmentId > 0
+                        ? "Update the details for this visit."
+                        : "Enter the patient, doctor, and visit details below.")
+                </p>
+            </div>
+        </div>
+
+        <div class="appointment-panel-body">
+            <form method="post"
+                  asp-page-handler="@(Model.AppointmentId > 0 ? "Update" : "")">
+
+                <div asp-validation-summary="All"
+                     class="text-danger mb-3"></div>
+
+                @if (Model.AppointmentId > 0)
+                {
+                    <input type="hidden" asp-for="AppointmentId" />
+                }
+
+                <div class="appointment-form-grid">
+                    <div class="appointment-field" id="patientAutocomplete">
+                        <label for="patientSearchInput">Patient <span>*</span></label>
+                        <input type="text"
+                               id="patientSearchInput"
+                               class="form-control"
+                               placeholder="Search by name, phone, or ID"
+                               autocomplete="off"
+                               required
+                               aria-autocomplete="list"
+                               aria-controls="patientSuggestions" />
+
+                        <input type="hidden"
+                               asp-for="Input.PatientId"
+                               id="selectedPatientId" />
+
+                        <div id="patientSuggestions"
+                             class="list-group appointment-suggestions shadow-sm"
+                             role="listbox" hidden></div>
+
+                        <small id="patientSelectionMessage"
+                               class="form-text text-muted">
+                            Search and select a registered patient.
+                        </small>
+                        <span asp-validation-for="Input.PatientId"
+                              class="text-danger"></span>
+                    </div>
+
+                    <div class="appointment-field" id="doctorAutocomplete">
+                        <label for="doctorSearchInput">Doctor <span>*</span></label>
+                        <input type="text"
+                               id="doctorSearchInput"
+                               class="form-control"
+                               placeholder="Search by name, specialty, or ID"
+                               autocomplete="off"
+                               required
+                               aria-autocomplete="list"
+                               aria-controls="doctorSuggestions" />
+
+                        <input type="hidden"
+                               asp-for="Input.DoctorId"
+                               id="selectedDoctorId" />
+
+                        <div id="doctorSuggestions"
+                             class="list-group appointment-suggestions shadow-sm"
+                             role="listbox" hidden></div>
+
+                        <small id="doctorSelectionMessage"
+                               class="form-text text-muted">
+                            Search and select a registered doctor.
+                        </small>
+                        <span asp-validation-for="Input.DoctorId"
+                              class="text-danger"></span>
+                    </div>
+
+                    <div class="appointment-field">
+                        <label asp-for="Input.AppointmentDate">Appointment date <span>*</span></label>
+                        <input asp-for="Input.AppointmentDate"
+                               type="date"
+                               class="form-control"
+                               required />
+                        <span asp-validation-for="Input.AppointmentDate"
+                              class="text-danger"></span>
+                    </div>
+
+                    <div class="appointment-field">
+                        <label asp-for="Input.AppointmentTime">Appointment time <span>*</span></label>
+                        <input asp-for="Input.AppointmentTime"
+                               type="time"
+                               class="form-control"
+                               required />
+                        <span asp-validation-for="Input.AppointmentTime"
+                              class="text-danger"></span>
+                    </div>
+
+                    <div class="appointment-field">
+                        <label asp-for="Input.Status">Appointment status</label>
+                        <select asp-for="Input.Status" class="form-select">
+                            <option value="Scheduled">Scheduled</option>
+                            <option value="Completed">Completed</option>
+                            <option value="Cancelled">Cancelled</option>
+                        </select>
+                    </div>
+
+                    <div class="appointment-field appointment-reason-field">
+                        <label asp-for="Input.Reason">Reason for visit</label>
+                        <textarea asp-for="Input.Reason"
+                                  class="form-control"
+                                  rows="3"
+                                  placeholder="Briefly describe the reason for the visit..."></textarea>
+                        <span asp-validation-for="Input.Reason"
+                              class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="appointment-form-footer">
+                    <span class="appointment-required-note">
+                        <span>*</span> Required fields
+                    </span>
+                    <div class="d-flex gap-2">
+                        @if (Model.AppointmentId > 0)
+                        {
+                            <a asp-page="/Appointments"
+                               class="btn appointment-cancel-button">Cancel</a>
+                        }
+                        <button type="submit" class="appointment-primary-action">
+                            @(Model.AppointmentId > 0
+                                ? "Save changes"
+                                : "Create appointment")
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <section class="appointment-panel appointment-records-panel">
+        <div class="appointment-panel-heading records-heading">
+            <div>
+                <h2>Appointment records</h2>
+                <p>Review and manage visits registered in the system.</p>
+            </div>
+            <span class="appointment-record-count">
+                @totalAppointments @(totalAppointments == 1 ? "record" : "records")
+            </span>
+        </div>
+
+        <div class="appointment-table-toolbar">
+            <div class="appointment-search-box">
+                <span aria-hidden="true">⌕</span>
+                <input type="search"
+                       id="appointmentSearch"
+                       placeholder="Search patient, doctor, date, or reason..."
+                       aria-label="Search appointments" />
+            </div>
+            <span class="appointment-search-hint">Search updates as you type</span>
+        </div>
+
+        @if (Model.AppointmentsList.Count == 0)
+        {
+            <div class="appointment-empty-state">
+                <div class="appointment-empty-icon">▦</div>
+                <h3>No appointments yet</h3>
+                <p>Schedule your first appointment using the form above.</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table appointment-table" id="appointmentTable">
+                    <thead>
+                        <tr>
+                            <th scope="col">Appointment</th>
+                            <th scope="col">Patient</th>
+                            <th scope="col">Doctor</th>
+                            <th scope="col">Date &amp; time</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Reason</th>
+                            <th scope="col" class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var appointment in Model.AppointmentsList)
+                        {
+                            var statusClass = appointment.Status?.ToLowerInvariant() switch
+                            {
+                                "scheduled" => "status-scheduled",
+                                "completed" => "status-completed",
+                                "cancelled" => "status-cancelled",
+                                _ => "status-default"
+                            };
+
+                            <tr>
+                                <td>
+                                    <span class="appointment-id">
+                                        #@appointment.AppointmentId
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="appointment-person">
+                                        @appointment.PatientName
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="appointment-doctor">
+                                        @appointment.DoctorName
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="appointment-date">
+                                        @appointment.AppointmentDate.ToString("dd MMM yyyy")
+                                    </span>
+                                    <small class="appointment-time">
+                                        @appointment.AppointmentTime
+                                    </small>
+                                </td>
+                                <td>
+                                    <span class="appointment-status @statusClass">
+                                        @appointment.Status
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="appointment-reason">
+                                        @(string.IsNullOrWhiteSpace(appointment.Reason)
+                                            ? "—"
+                                            : appointment.Reason)
+                                    </span>
+                                </td>
+                                <td>
+                                    <td>
+                                        <div class="appointment-row-actions">
+                                            @if (string.Equals(
+                                                     appointment.Status, "Scheduled",
+                                                     StringComparison.OrdinalIgnoreCase))
+                                            {
+                                                <form method="post"
+                                                      asp-page-handler="Complete"
+                                                      asp-route-id="@appointment.AppointmentId"
+                                                      onsubmit="return confirm('Mark this appointment as completed?');">
+                                                    <button type="submit" class="appointment-complete-button">
+                                                        ✓ Complete
+                                                    </button>
+                                                </form>
+
+                                                <form method="post"
+                                                      asp-page-handler="Cancel"
+                                                      asp-route-id="@appointment.AppointmentId"
+                                                      onsubmit="return confirm('Cancel this appointment?');">
+                                                    <button type="submit" class="appointment-delete-button">
+                                                        Cancel
+                                                    </button>
+                                                </form>
+                                            }
+
+                                            <form method="post" asp-page-handler="Edit">
+                                                <input type="hidden" name="id"
+                                                       value="@appointment.AppointmentId" />
+                                                <button type="submit" class="appointment-edit-button">
+                                                    Edit
+                                                </button>
+                                            </form>
+
+                                            <form method="post"
+                                                  asp-page-handler="Delete"
+                                                  onsubmit="return confirm('Are you sure you want to delete this appointment?');">
+                                                <input type="hidden" name="id"
+                                                       value="@appointment.AppointmentId" />
+                                                <button type="submit" class="appointment-delete-button">
+                                                    Delete
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="appointmentNoResults" class="appointment-no-results" hidden>
+                No appointments match your search. Try another keyword.
+            </div>
+
+            <div class="appointment-table-footer">
+                <span id="appointmentVisibleCount">
+                    Showing @totalAppointments of @totalAppointments records
+                </span>
+                <button type="button"
+                        id="clearAppointmentSearch"
+                        class="appointment-clear-search"
+                        hidden>
+                    Clear search
+                </button>
+            </div>
+        }
+    </section>
+</div>
+
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const patients = @Html.Raw(
+                                 System.Text.Json.JsonSerializer.Serialize(
+                                     Model.Patients.Select(p => new
+                                     {
+                                         id = p.PatientId,
+                                         name = p.Name,
+                                         phone = p.Phone
+                                     })
+                                 )
+                             );
+
+            const doctors = @Html.Raw(
+                                System.Text.Json.JsonSerializer.Serialize(
+                                    Model.Doctors.Select(d => new
+                                    {
+                                        id = d.DoctorId,
+                                        name = d.Name,
+                                        specialization = d.Specialization
+                                    })
+                                )
+                            );
+
+            function setupAutocomplete(config) {
+                const input = document.getElementById(config.inputId);
+                const hidden = document.getElementById(config.hiddenId);
+                const suggestions = document.getElementById(config.suggestionsId);
+                const message = document.getElementById(config.messageId);
+                const container = document.getElementById(config.containerId);
+                const form = container.closest("form");
+
+                let matches = [];
+                let activeIndex = -1;
+
+                function closeSuggestions() {
+                    suggestions.hidden = true;
+                    activeIndex = -1;
+                }
+
+                function selectItem(item) {
+                    hidden.value = item.id;
+                    input.value = config.display(item);
+
+                    message.textContent = "Selected: " + config.display(item);
+                    message.className = "form-text text-success";
+
+                    closeSuggestions();
+                }
+
+                function renderSuggestions() {
+                    const query = input.value.trim().toLowerCase();
+
+                    // Typing again clears the previous selection.
+                    hidden.value = "";
+                    suggestions.replaceChildren();
+                    matches = [];
+                    activeIndex = -1;
+
+                    message.textContent = "Choose an item from the suggestions.";
+                    message.className = "form-text text-muted";
+
+                    if (!query) {
+                        closeSuggestions();
+                        message.textContent = config.placeholder;
+                        return;
+                    }
+
+                    matches = config.items.filter(item =>
+                        config.searchText(item).toLowerCase().includes(query)
+                    ).slice(0, 10);
+
+                    if (matches.length === 0) {
+                        const empty = document.createElement("div");
+                        empty.className = "list-group-item text-muted";
+                        empty.textContent = "No matching results found.";
+                        suggestions.appendChild(empty);
+                        suggestions.hidden = false;
+                        return;
+                    }
+
+                    matches.forEach((item, index) => {
+                        const button = document.createElement("button");
+                        button.type = "button";
+                        button.className =
+                            "list-group-item list-group-item-action";
+
+                        const title = document.createElement("div");
+                        title.className = "fw-semibold";
+                        title.textContent = config.display(item);
+
+                        const detail = document.createElement("small");
+                        detail.className = "d-block text-muted";
+                        detail.textContent = config.details(item);
+
+                        button.append(title, detail);
+
+                        button.addEventListener("click", function () {
+                            selectItem(item);
+                        });
+
+                        button.addEventListener("mouseenter", function () {
+                            activeIndex = index;
+                            updateActive();
+                        });
+
+                        suggestions.appendChild(button);
+                    });
+
+                    suggestions.hidden = false;
+                }
+
+                function updateActive() {
+                    const buttons = suggestions.querySelectorAll("button");
+
+                    buttons.forEach((button, index) => {
+                        button.classList.toggle("active", index === activeIndex);
+                    });
+
+                    if (buttons[activeIndex]) {
+                        buttons[activeIndex].scrollIntoView({
+                            block: "nearest"
+                        });
+                    }
+                }
+
+                input.addEventListener("input", renderSuggestions);
+
+                input.addEventListener("keydown", function (event) {
+                    const buttons = suggestions.querySelectorAll("button");
+
+                    if (event.key === "ArrowDown" && !suggestions.hidden) {
+                        event.preventDefault();
+
+                        if (buttons.length) {
+                            activeIndex = (activeIndex + 1) % buttons.length;
+                            updateActive();
+                        }
+                    } else if (
+                        event.key === "ArrowUp" && !suggestions.hidden
+                    ) {
+                        event.preventDefault();
+
+                        if (buttons.length) {
+                            activeIndex =
+                                (activeIndex - 1 + buttons.length) %
+                                buttons.length;
+                            updateActive();
+                        }
+                    } else if (
+                        event.key === "Enter" &&
+                        !suggestions.hidden &&
+                        activeIndex >= 0 &&
+                        matches[activeIndex]
+                    ) {
+                        event.preventDefault();
+                        selectItem(matches[activeIndex]);
+                    } else if (event.key === "Escape") {
+                        closeSuggestions();
+                    }
+                });
+
+                document.addEventListener("click", function (event) {
+                    if (!container.contains(event.target)) {
+                        closeSuggestions();
+                    }
+                });
+
+                form.addEventListener("submit", function (event) {
+                    const validSelection = config.items.some(
+                        item => String(item.id) === hidden.value
+                    );
+
+                    if (!validSelection) {
+                        event.preventDefault();
+                        message.textContent =
+                            "Please select an item from the suggestions.";
+                        message.className = "form-text text-danger";
+                        input.focus();
+                    }
+                });
+
+                // Restore the selected value when editing an appointment
+                // or returning to the page after validation errors.
+                const initialItem = config.items.find(
+                    item => String(item.id) === hidden.value
+                );
+
+                if (initialItem) {
+                    input.value = config.display(initialItem);
+                    message.textContent =
+                        "Selected: " + config.display(initialItem);
+                    message.className = "form-text text-success";
+                }
+            }
+
+            setupAutocomplete({
+                containerId: "patientAutocomplete",
+                inputId: "patientSearchInput",
+                hiddenId: "selectedPatientId",
+                suggestionsId: "patientSuggestions",
+                messageId: "patientSelectionMessage",
+                items: patients,
+                placeholder: "Type a name or phone number, then select a patient.",
+                display: p => `${p.id} - ${p.name}`,
+                details: p => p.phone
+                    ? `Phone: ${p.phone}`
+                    : `Patient ID: ${p.id}`,
+                searchText: p => `${p.id} ${p.name} ${p.phone || ""}`
+            });
+
+            setupAutocomplete({
+                containerId: "doctorAutocomplete",
+                inputId: "doctorSearchInput",
+                hiddenId: "selectedDoctorId",
+                suggestionsId: "doctorSuggestions",
+                messageId: "doctorSelectionMessage",
+                items: doctors,
+                placeholder: "Type a name or specialization, then select a doctor.",
+                display: d => `${d.id} - ${d.name}`,
+                details: d => d.specialization || "Specialization not specified",
+                searchText: d =>
+                    `${d.id} ${d.name} ${d.specialization || ""}`
+            });
+        });
+    </script>
+    
+    <script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const search = document.getElementById("appointmentSearch");
+        const table = document.getElementById("appointmentTable");
+        const visibleCount = document.getElementById("appointmentVisibleCount");
+        const noResults = document.getElementById("appointmentNoResults");
+        const clearButton = document.getElementById("clearAppointmentSearch");
+
+        if (!search || !table) return;
+
+        const rows = Array.from(table.querySelectorAll("tbody tr"));
+
+        function filterAppointments() {
+            const query = search.value.trim().toLowerCase();
+            let shown = 0;
+
+            rows.forEach(row => {
+                const matches = row.textContent.toLowerCase().includes(query);
+                row.hidden = !matches;
+                if (matches) shown++;
+            });
+
+            if (visibleCount) {
+                visibleCount.textContent =
+                    `Showing ${shown} of ${rows.length} records`;
+            }
+
+            if (noResults) noResults.hidden = shown !== 0;
+            if (clearButton) clearButton.hidden = query.length === 0;
+
+            const container = table.closest(".table-responsive");
+            if (container) container.hidden = shown === 0;
+        }
+
+        search.addEventListener("input", filterAppointments);
+
+        clearButton?.addEventListener("click", function () {
+            search.value = "";
+            filterAppointments();
+            search.focus();
+        });
+
+        filterAppointments();
+    });
+</script>
+
+}

@@ -1,0 +1,1403 @@
+@page
+@model ClinicManagementWeb.Pages.PrescriptionsModel
+
+@{
+ViewData["Title"] = "Prescription Management";
+
+var selectedPrescription = Model.PrescriptionsList
+.FirstOrDefault(p => p.PrescriptionId == Model.SelectedPrescriptionId);
+string DisplayDoctorName(string? name)
+{
+if (string.IsNullOrWhiteSpace(name))
+return "Unknown doctor";
+
+name = System.Text.RegularExpressions.Regex
+.Replace(name.Trim(), @"^(Dr\.\s*)+", "",
+System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+return $"Dr. {name}";
+}
+}
+
+<div class="container mt-4 prescriptions-page">
+    <h1>Prescription Management</h1>
+    <p class="text-muted">Create prescriptions and manage their medicines.</p>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["SuccessMessage"]
+        <button type="button" class="btn-close"
+                data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["ErrorMessage"]
+        <button type="button" class="btn-close"
+                data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    }
+
+    <!-- Create Prescription -->
+    <div class="prescription-panel">
+        <div class="prescription-panel-header">
+            <h5 class="mb-0">Create Prescription</h5>
+        </div>
+
+        <div class="prescription-panel-body">
+            <form method="post">
+                <div asp-validation-summary="All" class="text-danger mb-3"></div>
+
+
+                <div class="mb-3" id="medicalHistoryAutocomplete">
+                    <label for="medicalHistorySearch" class="form-label">
+                        Patient / Medical History
+                    </label>
+
+                    <input type="text"
+                           id="medicalHistorySearch"
+                           class="form-control"
+                           placeholder="Search patient, doctor, diagnosis, date, or ID..."
+                           autocomplete="off"
+                           required
+                           disabled="@(Model.AvailableMedicalHistories.Count == 0)" />
+
+                    <input type="hidden"
+                           asp-for="Input.MedicalHistoryId"
+                           id="selectedMedicalHistoryId" />
+
+                    <div id="medicalHistorySuggestions"
+                         class="list-group mt-1 shadow-sm"
+                         hidden>
+                    </div>
+
+                    <small id="medicalHistoryMessage"
+                           class="form-text text-muted">
+                        Search for a medical history record, then select it.
+                    </small>
+
+                    <span asp-validation-for="Input.MedicalHistoryId"
+                          class="text-danger"></span>
+
+                    @if (Model.AvailableMedicalHistories.Count == 0)
+                    {
+                    <small class="d-block text-muted mt-1">
+                        No eligible medical history records are available.
+                        Each history record can have at most one prescription.
+                    </small>
+                    }
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Input.PrescriptionDate" class="form-label">
+                        Prescription Date
+                    </label>
+                    <input asp-for="Input.PrescriptionDate"
+                           type="date" class="form-control" required />
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Input.Notes" class="form-label">Notes</label>
+                    <textarea asp-for="Input.Notes" class="form-control" rows="3"
+                              placeholder="Additional prescription notes"></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-primary"
+                        disabled="@(Model.AvailableMedicalHistories.Count == 0)">
+                    Create Prescription
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Medicine to Prescription -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Add Medicine to Prescription</h5>
+        </div>
+
+        <div class="card-body">
+            <form method="post" asp-page-handler="AddItem">
+                <div asp-validation-summary="All" class="text-danger mb-3"></div>
+
+
+                <div class="mb-3" id="addPrescriptionAutocomplete">
+                    <label for="addPrescriptionSearch" class="form-label">
+                        Patient's Prescription
+                    </label>
+
+                    <input type="text"
+                           id="addPrescriptionSearch"
+                           class="form-control"
+                           placeholder="Search patient, doctor, diagnosis, or ID..."
+                           autocomplete="off"
+                           required />
+
+                    <input type="hidden"
+                           asp-for="ItemInput.PrescriptionId"
+                           id="selectedAddPrescriptionId" />
+
+                    <div id="addPrescriptionSuggestions"
+                         class="list-group mt-1 shadow-sm"
+                         hidden>
+                    </div>
+
+                    <small id="addPrescriptionMessage"
+                           class="form-text text-muted">
+                        Type a name or ID, then select a prescription.
+                    </small>
+
+                    <span asp-validation-for="ItemInput.PrescriptionId"
+                          class="text-danger"></span>
+                </div>
+
+                @if (selectedPrescription != null)
+                {
+                <div class="alert alert-info">
+                    <h6 class="mb-2">Selected Prescription Details</h6>
+                    <div><strong>Patient:</strong> @selectedPrescription.PatientName</div>
+                    <strong>Doctor:</strong> @DisplayDoctorName(selectedPrescription.DoctorName)
+                    <div><strong>Prescription ID:</strong> #@selectedPrescription.PrescriptionId</div>
+                    <div><strong>Medical History:</strong> #@selectedPrescription.MedicalHistoryId</div>
+                    <div><strong>Appointment Date:</strong> @selectedPrescription.AppointmentDate.ToString("dd/MM/yyyy")</div>
+                    <div><strong>Prescription Date:</strong> @(selectedPrescription.PrescriptionDate?.ToString("dd/MM/yyyy") ?? "—")</div>
+                    <div>
+                        <strong>Diagnosis:</strong>
+                        @(string.IsNullOrWhiteSpace(selectedPrescription.DiagnosisDetails)
+                        ? "Not recorded"
+                        : selectedPrescription.DiagnosisDetails)
+                    </div>
+                </div>
+                }
+
+
+                <!-- Medicine Autocomplete -->
+                <div class="mb-3" id="medicineAutocomplete">
+                    <label for="medicineSearchInput" class="form-label">
+                        Medicine
+                    </label>
+
+                    <input type="text"
+                           id="medicineSearchInput"
+                           class="form-control"
+                           placeholder="Start typing a medicine name..."
+                           autocomplete="off"
+                           aria-autocomplete="list"
+                           aria-controls="medicineSuggestions"
+                           aria-expanded="false"
+                           required />
+
+                    <!-- Actual medicine ID submitted to the server -->
+                    <input type="hidden"
+                           asp-for="ItemInput.MedicineId"
+                           id="selectedMedicineId" />
+
+                    <div id="medicineSuggestions"
+                         class="list-group mt-1 shadow-sm"
+                         role="listbox"
+                         hidden>
+                    </div>
+
+                    <div id="medicineSelectionMessage"
+                         class="form-text text-muted">
+                        Type a medicine name, type, or manufacturer to find a medicine.
+                    </div>
+
+                    @if (Model.MedicinesList.Count == 0)
+                    {
+                    <small class="d-block text-muted mt-1">
+                        No medicines found. Add medicines in Medicine Management first.
+                    </small>
+                    }
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="ItemInput.Quantity" class="form-label">
+                        Quantity to Dispense
+                    </label>
+                    <input asp-for="ItemInput.Quantity" type="number" min="1"
+                           class="form-control" required />
+                    <span asp-validation-for="ItemInput.Quantity"
+                          class="text-danger"></span>
+                    <small class="text-muted">
+                        The available stock will decrease by this quantity after a successful addition.
+                    </small>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="ItemInput.Dosage" class="form-label">Dosage</label>
+                    <input asp-for="ItemInput.Dosage" class="form-control"
+                           placeholder="e.g. 500 mg" />
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="ItemInput.Frequency" class="form-label">Frequency</label>
+                    <input asp-for="ItemInput.Frequency" class="form-control"
+                           placeholder="e.g. Twice daily" />
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="ItemInput.Duration" class="form-label">Duration</label>
+                    <input asp-for="ItemInput.Duration" class="form-control"
+                           placeholder="e.g. 5 days" />
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="ItemInput.Instructions" class="form-label">
+                        Instructions
+                    </label>
+                    <textarea asp-for="ItemInput.Instructions"
+                              class="form-control" rows="2"
+                              placeholder="e.g. Take after meals"></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-success"
+                        disabled="@(Model.PrescriptionsList.Count == 0 || Model.MedicinesList.Count == 0)">
+                    Add Medicine
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Prescription Medicines -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Prescription Medicines</h5>
+        </div>
+
+        <div class="card-body">
+
+            <form method="get" class="mb-3" id="viewPrescriptionForm">
+                <label for="viewPrescriptionSearch" class="form-label">
+                    Find a Prescription
+                </label>
+
+                <input type="text"
+                       id="viewPrescriptionSearch"
+                       class="form-control"
+                       placeholder="Search patient, doctor, diagnosis, or ID..."
+                       autocomplete="off"
+                       required />
+
+                <input type="hidden"
+                       id="viewPrescriptionId"
+                       name="prescriptionId" />
+
+                <div id="viewPrescriptionSuggestions"
+                     class="list-group mt-1 shadow-sm"
+                     hidden>
+                </div>
+
+                <small id="viewPrescriptionMessage"
+                       class="form-text text-muted">
+                    Search and select a prescription to view its medicines.
+                </small>
+
+                <button type="submit" class="btn btn-outline-primary mt-2">
+                    View
+                </button>
+            </form>
+
+            @if (selectedPrescription != null)
+            {
+            <div class="alert alert-light border mb-3">
+                <strong>Patient:</strong> @selectedPrescription.PatientName
+                <span class="mx-2">|</span>
+                <strong>Doctor:</strong> @DisplayDoctorName(selectedPrescription.DoctorName)
+                <span class="mx-2">|</span>
+                <strong>Visit:</strong> @selectedPrescription.AppointmentDate.ToString("dd/MM/yyyy")
+                <div class="mt-1">
+                    <strong>Diagnosis:</strong>
+                    @(string.IsNullOrWhiteSpace(selectedPrescription.DiagnosisDetails)
+                    ? "Not recorded"
+                    : selectedPrescription.DiagnosisDetails)
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table align-middle prescription-table">
+                    <thead>
+                    <tr>
+                        <th>Medicine</th>
+                        <th>Quantity</th>
+                        <th>Dosage</th>
+                        <th>Frequency</th>
+                        <th>Duration</th>
+                        <th>Instructions</th>
+                    </tr>
+                    </thead>
+
+                    <tbody>
+                    @if (Model.PrescriptionItemsList.Count == 0)
+                    {
+                    <tr>
+                        <td colspan="6" class="text-center text-muted">
+                            No medicines have been added to this prescription yet.
+                        </td>
+                    </tr>
+                    }
+                    else
+                    {
+                    @foreach (var item in Model.PrescriptionItemsList)
+                    {
+                    <tr>
+                        <td>@item.MedicineName</td>
+                        <td>@item.Quantity</td>
+                        <td>@(item.Dosage ?? "—")</td>
+                        <td>@(item.Frequency ?? "—")</td>
+                        <td>@(item.Duration ?? "—")</td>
+                        <td>@(item.Instructions ?? "—")</td>
+                    </tr>
+                    }
+                    }
+                    </tbody>
+                </table>
+            </div>
+            }
+            else
+            {
+            <p class="text-muted mb-0">
+                Select a patient's prescription above to view its medicines.
+            </p>
+            }
+        </div>
+    </div>
+
+    <!-- Existing Prescriptions -->
+    <h2 class="h4 mb-3">Existing Prescriptions</h2>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <label for="existingPrescriptionSearch" class="form-label">
+                Search Prescriptions
+            </label>
+
+            <input type="search"
+                   id="existingPrescriptionSearch"
+                   class="form-control"
+                   placeholder="Search patient, doctor, diagnosis, or ID..."
+                   autocomplete="off" />
+
+            <div class="d-flex justify-content-between align-items-center mt-2">
+                <small id="existingPrescriptionCount" class="text-muted"></small>
+
+                <button type="button"
+                        id="clearExistingPrescriptionSearch"
+                        class="btn btn-sm btn-outline-secondary">
+                    Clear search
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-bordered table-striped align-middle">
+            <thead>
+            <tr>
+                <th>Prescription ID</th>
+                <th>Patient</th>
+                <th>Doctor</th>
+                <th>Medical History</th>
+                <th>Appointment Date</th>
+                <th>Diagnosis</th>
+                <th>Prescription Date</th>
+                <th>Notes</th>
+                <th>Medicines</th>
+            </tr>
+            </thead>
+
+            <tbody>
+            @if (Model.PrescriptionsList.Count == 0)
+            {
+            <tr>
+                <td colspan="9" class="text-center text-muted">
+                    No prescriptions found.
+                </td>
+            </tr>
+            }
+            else
+            {
+            @foreach (var prescription in Model.PrescriptionsList)
+            {
+            <tr class="existing-prescription-row"
+                data-search="@($"{prescription.PrescriptionId} {prescription.PatientName} {prescription.DoctorName} {prescription.DiagnosisDetails} {prescription.MedicalHistoryId} {prescription.Notes}")">
+                <td>#@prescription.PrescriptionId</td>
+                <td>@prescription.PatientName</td>
+                <td>@DisplayDoctorName(prescription.DoctorName)</td>
+                <td>#@prescription.MedicalHistoryId</td>
+                <td>@prescription.AppointmentDate.ToString("dd/MM/yyyy")</td>
+                <td>
+                    @(string.IsNullOrWhiteSpace(prescription.DiagnosisDetails)
+                    ? "—"
+                    : prescription.DiagnosisDetails)
+                </td>
+                <td>@(prescription.PrescriptionDate?.ToString("dd/MM/yyyy") ?? "—")</td>
+                <td>@(prescription.Notes ?? "—")</td>
+                <td>
+                    <a asp-page="./Prescriptions"
+                       asp-route-prescriptionId="@prescription.PrescriptionId"
+                       class="btn btn-sm btn-outline-primary">
+                        View medicines
+                    </a>
+                </td>
+            </tr>
+            }
+            }
+            <tr id="noExistingPrescriptionResults" hidden>
+                <td colspan="9" class="text-center text-muted py-4">
+                    No prescriptions match your search.
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+@section Scripts {
+<partial name="_ValidationScriptsPartial" />
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        function displayDoctorName(name) {
+            const cleanName = (name || "")
+                .replace(/^(Dr\.\s*)+/i, "")
+                .trim();
+
+            return cleanName ? `Dr. ${cleanName}` : "Unknown doctor";
+        }
+
+        // Medical history autocomplete
+        const historyContainer =
+            document.getElementById("medicalHistoryAutocomplete");
+        const historySearch =
+            document.getElementById("medicalHistorySearch");
+        const selectedHistoryId =
+            document.getElementById("selectedMedicalHistoryId");
+        const historySuggestions =
+            document.getElementById("medicalHistorySuggestions");
+        const historyMessage =
+            document.getElementById("medicalHistoryMessage");
+
+        const medicalHistories = @Html.Raw(
+        System.Text.Json.JsonSerializer.Serialize(
+        Model.AvailableMedicalHistories.Select(record => new
+        {
+        id = record.MedicalHistoryId,
+        patient = record.PatientName,
+        doctor = record.DoctorName,
+        date = record.AppointmentDate.ToString("dd/MM/yyyy"),
+        diagnosis = record.DiagnosisDetails
+        })
+        )
+        );
+
+        let matchingHistories = [];
+        let activeHistoryIndex = -1;
+
+        function closeHistorySuggestions() {
+            historySuggestions.hidden = true;
+            activeHistoryIndex = -1;
+        }
+
+        function selectMedicalHistory(record) {
+            selectedHistoryId.value = record.id;
+            historySearch.value =
+                `#${record.id} — ${record.patient} — ${displayDoctorName(record.doctor)}`;
+
+            historyMessage.textContent =
+                `Selected: ${record.date}` +
+                (record.diagnosis
+                    ? ` · Diagnosis: ${record.diagnosis}`
+                    : "");
+
+            historyMessage.className = "form-text text-success";
+            closeHistorySuggestions();
+        }
+
+        function updateHistoryActiveSuggestion() {
+            const buttons =
+                historySuggestions.querySelectorAll("button");
+
+            buttons.forEach((button, index) => {
+                button.classList.toggle(
+                    "active",
+                    index === activeHistoryIndex
+                );
+            });
+
+            if (buttons[activeHistoryIndex]) {
+                buttons[activeHistoryIndex].scrollIntoView({
+                    block: "nearest"
+                });
+            }
+        }
+
+        function renderHistorySuggestions() {
+            const query = historySearch.value.trim().toLowerCase();
+
+            // Typing again clears the previous selection.
+            selectedHistoryId.value = "";
+            historySuggestions.replaceChildren();
+            matchingHistories = [];
+            activeHistoryIndex = -1;
+
+            historyMessage.textContent =
+                "Choose a medical history record from the suggestions.";
+            historyMessage.className = "form-text text-muted";
+
+            if (!query) {
+                closeHistorySuggestions();
+                historyMessage.textContent =
+                    "Search for a medical history record, then select it.";
+                return;
+            }
+
+            matchingHistories = medicalHistories
+                .filter(record => [
+                    record.id,
+                    record.patient,
+                    record.doctor,
+                    record.date,
+                    record.diagnosis
+                ].filter(Boolean).join(" ").toLowerCase().includes(query))
+                .slice(0, 10);
+
+            if (matchingHistories.length === 0) {
+                const empty = document.createElement("div");
+                empty.className = "list-group-item text-muted";
+                empty.textContent =
+                    "No eligible medical history records found.";
+
+                historySuggestions.appendChild(empty);
+                historySuggestions.hidden = false;
+                return;
+            }
+
+            matchingHistories.forEach((record, index) => {
+                const button = document.createElement("button");
+                button.type = "button";
+                button.className =
+                    "list-group-item list-group-item-action";
+
+                const title = document.createElement("div");
+                title.className = "fw-semibold";
+                title.textContent =
+                    `#${record.id} — ${record.patient} — ${displayDoctorName(record.doctor)}`;
+
+                const details = document.createElement("small");
+                details.className = "d-block text-muted";
+                details.textContent =
+                    `Visit: ${record.date}` +
+                    (record.diagnosis
+                        ? ` · Diagnosis: ${record.diagnosis}`
+                        : "");
+
+                button.append(title, details);
+
+                button.addEventListener("click", function () {
+                    selectMedicalHistory(record);
+                });
+
+                button.addEventListener("mouseenter", function () {
+                    activeHistoryIndex = index;
+                    updateHistoryActiveSuggestion();
+                });
+
+                historySuggestions.appendChild(button);
+            });
+
+            historySuggestions.hidden = false;
+        }
+
+        historySearch.addEventListener(
+            "input",
+            renderHistorySuggestions
+        );
+
+        historySearch.addEventListener("keydown", function (event) {
+            const buttons =
+                historySuggestions.querySelectorAll("button");
+
+            if (
+                event.key === "ArrowDown" &&
+                !historySuggestions.hidden &&
+                buttons.length
+            ) {
+                event.preventDefault();
+                activeHistoryIndex =
+                    (activeHistoryIndex + 1) % buttons.length;
+                updateHistoryActiveSuggestion();
+            } else if (
+                event.key === "ArrowUp" &&
+                !historySuggestions.hidden &&
+                buttons.length
+            ) {
+                event.preventDefault();
+                activeHistoryIndex =
+                    (activeHistoryIndex - 1 + buttons.length) %
+                    buttons.length;
+                updateHistoryActiveSuggestion();
+            } else if (
+                event.key === "Enter" &&
+                !historySuggestions.hidden &&
+                activeHistoryIndex >= 0 &&
+                matchingHistories[activeHistoryIndex]
+            ) {
+                event.preventDefault();
+                selectMedicalHistory(
+                    matchingHistories[activeHistoryIndex]
+                );
+            } else if (event.key === "Escape") {
+                closeHistorySuggestions();
+            }
+        });
+
+        document.addEventListener("click", function (event) {
+            if (!historyContainer.contains(event.target)) {
+                closeHistorySuggestions();
+            }
+        });
+
+        // Require a valid selection before creating a prescription.
+        historyContainer.closest("form").addEventListener(
+            "submit",
+            function (event) {
+                const validSelection = medicalHistories.some(
+                    record =>
+                        String(record.id) === selectedHistoryId.value
+                );
+
+                if (!validSelection) {
+                    event.preventDefault();
+                    historyMessage.textContent =
+                        "Please select a medical history record from the suggestions.";
+                    historyMessage.className =
+                        "form-text text-danger";
+                    historySearch.focus();
+                }
+            }
+        );
+
+        // Medicine autocomplete
+        const medicineAutocomplete =
+            document.getElementById("medicineAutocomplete");
+        const medicineSearchInput =
+            document.getElementById("medicineSearchInput");
+        const selectedMedicineId =
+            document.getElementById("selectedMedicineId");
+        const medicineSuggestions =
+            document.getElementById("medicineSuggestions");
+        const medicineSelectionMessage =
+            document.getElementById("medicineSelectionMessage");
+
+        const medicines = @Html.Raw(
+        System.Text.Json.JsonSerializer.Serialize(
+        Model.MedicinesList.Select(m => new
+        {
+        id = m.MedicineId,
+        name = m.Name,
+        type = m.Type,
+        manufacturer = m.Manufacturer,
+        unit = m.Unit,
+        stock = m.StockQuantity
+        })
+        )
+        );
+
+        let matchingMedicines = [];
+        let activeMedicineIndex = -1;
+
+        function closeMedicineSuggestions() {
+            medicineSuggestions.hidden = true;
+            medicineSearchInput.setAttribute("aria-expanded", "false");
+            activeMedicineIndex = -1;
+        }
+
+        function updateActiveSuggestion() {
+            const buttons =
+                medicineSuggestions.querySelectorAll("button");
+
+            buttons.forEach((button, index) => {
+                button.classList.toggle(
+                    "active",
+                    index === activeMedicineIndex
+                );
+
+                button.setAttribute(
+                    "aria-selected",
+                    index === activeMedicineIndex ? "true" : "false"
+                );
+            });
+
+            if (activeMedicineIndex >= 0 &&
+                buttons[activeMedicineIndex]) {
+                buttons[activeMedicineIndex].scrollIntoView({
+                    block: "nearest"
+                });
+            }
+        }
+
+        function selectMedicine(medicine) {
+            if (medicine.stock <= 0) {
+                medicineSelectionMessage.textContent =
+                    "This medicine is out of stock. Choose another.";
+                medicineSelectionMessage.className =
+                    "form-text text-danger";
+                return;
+            }
+
+            selectedMedicineId.value = medicine.id;
+            medicineSearchInput.value = medicine.name;
+
+            medicineSelectionMessage.textContent =
+                `Selected: ${medicine.name} — Available stock: ` +
+                `${medicine.stock} ${medicine.unit || "units"}.`;
+
+            medicineSelectionMessage.className =
+                "form-text text-success";
+
+            closeMedicineSuggestions();
+        }
+
+        function renderMedicineSuggestions() {
+            const query =
+                medicineSearchInput.value.trim().toLowerCase();
+
+            // Typing again invalidates the previous selection.
+            selectedMedicineId.value = "";
+            medicineSuggestions.replaceChildren();
+            matchingMedicines = [];
+            activeMedicineIndex = -1;
+
+            medicineSelectionMessage.textContent =
+                "Choose a medicine from the suggestions.";
+            medicineSelectionMessage.className =
+                "form-text text-muted";
+
+            if (!query) {
+                closeMedicineSuggestions();
+
+                medicineSelectionMessage.textContent =
+                    "Type a medicine name, type, or manufacturer to find a medicine.";
+                return;
+            }
+
+            matchingMedicines = medicines
+                .filter(medicine => [
+                    medicine.name,
+                    medicine.type,
+                    medicine.manufacturer
+                ].filter(Boolean).join(" ").toLowerCase().includes(query))
+                .slice(0, 10);
+
+            if (matchingMedicines.length === 0) {
+                const empty = document.createElement("div");
+                empty.className =
+                    "list-group-item text-muted";
+                empty.textContent = "No matching medicines found.";
+
+                medicineSuggestions.appendChild(empty);
+                medicineSuggestions.hidden = false;
+                medicineSearchInput.setAttribute(
+                    "aria-expanded", "true"
+                );
+                return;
+            }
+
+            matchingMedicines.forEach((medicine, index) => {
+                const button = document.createElement("button");
+                button.type = "button";
+                button.className =
+                    "list-group-item list-group-item-action";
+                button.setAttribute("role", "option");
+                button.setAttribute("aria-selected", "false");
+
+                const name = document.createElement("div");
+                name.className = "fw-semibold";
+                name.textContent = medicine.name;
+
+                const details = document.createElement("small");
+                details.className = "d-block text-muted";
+
+                details.textContent = [
+                    medicine.type || "Type unspecified",
+                    medicine.manufacturer || "Manufacturer unspecified",
+                    medicine.stock > 0
+                        ? `Stock: ${medicine.stock} ${medicine.unit || "units"}`
+                        : "Out of stock"
+                ].join(" · ");
+
+                button.append(name, details);
+
+                button.addEventListener("click", function () {
+                    selectMedicine(medicine);
+                });
+
+                button.addEventListener("mouseenter", function () {
+                    activeMedicineIndex = index;
+                    updateActiveSuggestion();
+                });
+
+                medicineSuggestions.appendChild(button);
+            });
+
+            medicineSuggestions.hidden = false;
+            medicineSearchInput.setAttribute(
+                "aria-expanded", "true"
+            );
+        }
+
+        medicineSearchInput.addEventListener(
+            "input", renderMedicineSuggestions
+        );
+
+        medicineSearchInput.addEventListener("keydown", function (event) {
+            const buttons =
+                medicineSuggestions.querySelectorAll("button");
+
+            if (event.key === "ArrowDown" &&
+                !medicineSuggestions.hidden) {
+                event.preventDefault();
+
+                if (buttons.length) {
+                    activeMedicineIndex =
+                        (activeMedicineIndex + 1) % buttons.length;
+                    updateActiveSuggestion();
+                }
+            } else if (event.key === "ArrowUp" &&
+                !medicineSuggestions.hidden) {
+                event.preventDefault();
+
+                if (buttons.length) {
+                    activeMedicineIndex =
+                        (activeMedicineIndex - 1 + buttons.length) %
+                        buttons.length;
+                    updateActiveSuggestion();
+                }
+            } else if (event.key === "Enter" &&
+                !medicineSuggestions.hidden &&
+                activeMedicineIndex >= 0 &&
+                matchingMedicines[activeMedicineIndex]) {
+                event.preventDefault();
+                selectMedicine(
+                    matchingMedicines[activeMedicineIndex]
+                );
+            } else if (event.key === "Escape") {
+                closeMedicineSuggestions();
+            }
+        });
+
+        document.addEventListener("click", function (event) {
+            if (!medicineAutocomplete.contains(event.target)) {
+                closeMedicineSuggestions();
+            }
+        });
+
+        // Validate that a real, in-stock medicine was selected.
+        const addMedicineForm = medicineAutocomplete.closest("form");
+
+        addMedicineForm.addEventListener("submit", function (event) {
+            const selectedMedicine = medicines.find(
+                medicine =>
+                    String(medicine.id) === selectedMedicineId.value
+            );
+
+            if (!selectedMedicine || selectedMedicine.stock <= 0) {
+                event.preventDefault();
+
+                medicineSelectionMessage.textContent =
+                    "Please choose an available medicine from the suggestions.";
+                medicineSelectionMessage.className =
+                    "form-text text-danger";
+
+                medicineSearchInput.focus();
+            }
+        });
+
+        // Search prescription dropdowns by patient, doctor,
+        // diagnosis, and IDs.
+
+        // Prescription autocomplete for adding medicine
+        const addPrescriptionContainer =
+            document.getElementById("addPrescriptionAutocomplete");
+
+        const addPrescriptionSearch =
+            document.getElementById("addPrescriptionSearch");
+
+        const selectedAddPrescriptionId =
+            document.getElementById("selectedAddPrescriptionId");
+
+        const addPrescriptionSuggestions =
+            document.getElementById("addPrescriptionSuggestions");
+
+        const addPrescriptionMessage =
+            document.getElementById("addPrescriptionMessage");
+
+        const prescriptionRecords = @Html.Raw(
+        System.Text.Json.JsonSerializer.Serialize(
+        Model.PrescriptionsList.Select(p => new
+        {
+        id = p.PrescriptionId,
+        patient = p.PatientName,
+        doctor = p.DoctorName,
+        historyId = p.MedicalHistoryId,
+        date = p.AppointmentDate.ToString("dd/MM/yyyy"),
+        diagnosis = p.DiagnosisDetails
+        })
+        )
+        );
+
+        let matchingPrescriptions = [];
+        let activePrescriptionIndex = -1;
+
+        function closeAddPrescriptionSuggestions() {
+            addPrescriptionSuggestions.hidden = true;
+            activePrescriptionIndex = -1;
+        }
+
+        function selectAddPrescription(prescription) {
+            selectedAddPrescriptionId.value = prescription.id;
+
+            addPrescriptionSearch.value =
+                `#${prescription.id} — ${prescription.patient} — ${displayDoctorName(prescription.doctor)}`;
+
+            addPrescriptionMessage.textContent =
+                `Selected prescription #${prescription.id} for ${prescription.patient}.`;
+
+            addPrescriptionMessage.className =
+                "form-text text-success";
+
+            closeAddPrescriptionSuggestions();
+        }
+
+        function updateActivePrescriptionSuggestion() {
+            const buttons =
+                addPrescriptionSuggestions.querySelectorAll("button");
+
+            buttons.forEach((button, index) => {
+                button.classList.toggle(
+                    "active",
+                    index === activePrescriptionIndex
+                );
+            });
+
+            if (buttons[activePrescriptionIndex]) {
+                buttons[activePrescriptionIndex].scrollIntoView({
+                    block: "nearest"
+                });
+            }
+        }
+
+        function renderAddPrescriptionSuggestions() {
+            const query =
+                addPrescriptionSearch.value.trim().toLowerCase();
+
+            selectedAddPrescriptionId.value = "";
+            addPrescriptionSuggestions.replaceChildren();
+            matchingPrescriptions = [];
+            activePrescriptionIndex = -1;
+
+            addPrescriptionMessage.textContent =
+                "Choose a prescription from the suggestions.";
+            addPrescriptionMessage.className =
+                "form-text text-muted";
+
+            if (!query) {
+                closeAddPrescriptionSuggestions();
+                addPrescriptionMessage.textContent =
+                    "Type a name or ID, then select a prescription.";
+                return;
+            }
+
+            matchingPrescriptions = prescriptionRecords
+                .filter(p => [
+                    p.id,
+                    p.patient,
+                    p.doctor,
+                    p.historyId,
+                    p.date,
+                    p.diagnosis
+                ].filter(Boolean).join(" ").toLowerCase().includes(query))
+                .slice(0, 10);
+
+            if (matchingPrescriptions.length === 0) {
+                const empty = document.createElement("div");
+                empty.className = "list-group-item text-muted";
+                empty.textContent = "No matching prescriptions found.";
+
+                addPrescriptionSuggestions.appendChild(empty);
+                addPrescriptionSuggestions.hidden = false;
+                return;
+            }
+
+            matchingPrescriptions.forEach((prescription, index) => {
+                const button = document.createElement("button");
+                button.type = "button";
+                button.className =
+                    "list-group-item list-group-item-action";
+
+                const title = document.createElement("div");
+                title.className = "fw-semibold";
+                title.textContent =
+                    `#${prescription.id} — ${prescription.patient} — ${displayDoctorName(prescription.doctor)}`;
+
+                const details = document.createElement("small");
+                details.className = "d-block text-muted";
+                details.textContent =
+                    `Visit: ${prescription.date} · History #${prescription.historyId}` +
+                    (prescription.diagnosis
+                        ? ` · ${prescription.diagnosis}`
+                        : "");
+
+                button.append(title, details);
+
+                button.addEventListener("click", function () {
+                    selectAddPrescription(prescription);
+                });
+
+                button.addEventListener("mouseenter", function () {
+                    activePrescriptionIndex = index;
+                    updateActivePrescriptionSuggestion();
+                });
+
+                addPrescriptionSuggestions.appendChild(button);
+            });
+
+            addPrescriptionSuggestions.hidden = false;
+        }
+
+        addPrescriptionSearch.addEventListener(
+            "input",
+            renderAddPrescriptionSuggestions
+        );
+
+        addPrescriptionSearch.addEventListener(
+            "keydown",
+            function (event) {
+                const buttons =
+                    addPrescriptionSuggestions.querySelectorAll("button");
+
+                if (
+                    event.key === "ArrowDown" &&
+                    !addPrescriptionSuggestions.hidden &&
+                    buttons.length
+                ) {
+                    event.preventDefault();
+                    activePrescriptionIndex =
+                        (activePrescriptionIndex + 1) % buttons.length;
+                    updateActivePrescriptionSuggestion();
+                } else if (
+                    event.key === "ArrowUp" &&
+                    !addPrescriptionSuggestions.hidden &&
+                    buttons.length
+                ) {
+                    event.preventDefault();
+                    activePrescriptionIndex =
+                        (activePrescriptionIndex - 1 + buttons.length) %
+                        buttons.length;
+                    updateActivePrescriptionSuggestion();
+                } else if (
+                    event.key === "Enter" &&
+                    !addPrescriptionSuggestions.hidden &&
+                    activePrescriptionIndex >= 0 &&
+                    matchingPrescriptions[activePrescriptionIndex]
+                ) {
+                    event.preventDefault();
+                    selectAddPrescription(
+                        matchingPrescriptions[activePrescriptionIndex]
+                    );
+                } else if (event.key === "Escape") {
+                    closeAddPrescriptionSuggestions();
+                }
+            }
+        );
+
+        document.addEventListener("click", function (event) {
+            if (!addPrescriptionContainer.contains(event.target)) {
+                closeAddPrescriptionSuggestions();
+            }
+        });
+
+        addPrescriptionContainer.closest("form").addEventListener(
+            "submit",
+            function (event) {
+                const validSelection = prescriptionRecords.some(
+                    p => String(p.id) === selectedAddPrescriptionId.value
+                );
+
+                if (!validSelection) {
+                    event.preventDefault();
+
+                    addPrescriptionMessage.textContent =
+                        "Please select a prescription from the suggestions.";
+                    addPrescriptionMessage.className =
+                        "form-text text-danger";
+
+                    addPrescriptionSearch.focus();
+                }
+            }
+        );
+
+        // Prescription autocomplete for viewing medicines
+        const viewPrescriptionForm =
+            document.getElementById("viewPrescriptionForm");
+        const viewPrescriptionSearch =
+            document.getElementById("viewPrescriptionSearch");
+        const viewPrescriptionId =
+            document.getElementById("viewPrescriptionId");
+        const viewPrescriptionSuggestions =
+            document.getElementById("viewPrescriptionSuggestions");
+        const viewPrescriptionMessage =
+            document.getElementById("viewPrescriptionMessage");
+
+        let matchingViewPrescriptions = [];
+        let activeViewPrescriptionIndex = -1;
+
+        function closeViewPrescriptionSuggestions() {
+            viewPrescriptionSuggestions.hidden = true;
+            activeViewPrescriptionIndex = -1;
+        }
+
+        function selectViewPrescription(prescription) {
+            viewPrescriptionId.value = prescription.id;
+            viewPrescriptionSearch.value =
+                `#${prescription.id} — ${prescription.patient} — ${displayDoctorName(prescription.doctor)}`;
+
+            viewPrescriptionMessage.textContent =
+                `Selected prescription #${prescription.id}.`;
+            viewPrescriptionMessage.className =
+                "form-text text-success";
+
+            closeViewPrescriptionSuggestions();
+        }
+
+        function renderViewPrescriptionSuggestions() {
+            const query =
+                viewPrescriptionSearch.value.trim().toLowerCase();
+
+            viewPrescriptionId.value = "";
+            viewPrescriptionSuggestions.replaceChildren();
+            matchingViewPrescriptions = [];
+            activeViewPrescriptionIndex = -1;
+
+            if (!query) {
+                closeViewPrescriptionSuggestions();
+                viewPrescriptionMessage.textContent =
+                    "Search and select a prescription to view its medicines.";
+                viewPrescriptionMessage.className =
+                    "form-text text-muted";
+                return;
+            }
+
+            matchingViewPrescriptions = prescriptionRecords
+                .filter(p => [
+                    p.id,
+                    p.patient,
+                    p.doctor,
+                    p.historyId,
+                    p.date,
+                    p.diagnosis
+                ].filter(Boolean).join(" ").toLowerCase().includes(query))
+                .slice(0, 10);
+
+            if (matchingViewPrescriptions.length === 0) {
+                const empty = document.createElement("div");
+                empty.className = "list-group-item text-muted";
+                empty.textContent = "No matching prescriptions found.";
+
+                viewPrescriptionSuggestions.appendChild(empty);
+                viewPrescriptionSuggestions.hidden = false;
+                viewPrescriptionMessage.textContent =
+                    "No matching prescriptions found.";
+                viewPrescriptionMessage.className =
+                    "form-text text-muted";
+                return;
+            }
+
+            matchingViewPrescriptions.forEach((prescription, index) => {
+                const button = document.createElement("button");
+                button.type = "button";
+                button.className =
+                    "list-group-item list-group-item-action";
+
+                const title = document.createElement("div");
+                title.className = "fw-semibold";
+                title.textContent =
+                    `#${prescription.id} — ${prescription.patient} — ${displayDoctorName(prescription.doctor)}`;
+
+                const details = document.createElement("small");
+                details.className = "d-block text-muted";
+                details.textContent =
+                    `Visit: ${prescription.date} · History #${prescription.historyId}` +
+                    (prescription.diagnosis
+                        ? ` · ${prescription.diagnosis}`
+                        : "");
+
+                button.append(title, details);
+
+                button.addEventListener("click", function () {
+                    selectViewPrescription(prescription);
+                });
+
+                button.addEventListener("mouseenter", function () {
+                    activeViewPrescriptionIndex = index;
+                    updateViewPrescriptionActive();
+                });
+
+                viewPrescriptionSuggestions.appendChild(button);
+            });
+
+            viewPrescriptionSuggestions.hidden = false;
+            viewPrescriptionMessage.textContent =
+                "Choose a prescription from the suggestions.";
+            viewPrescriptionMessage.className =
+                "form-text text-muted";
+        }
+
+        function updateViewPrescriptionActive() {
+            const buttons =
+                viewPrescriptionSuggestions.querySelectorAll("button");
+
+            buttons.forEach((button, index) => {
+                button.classList.toggle(
+                    "active",
+                    index === activeViewPrescriptionIndex
+                );
+            });
+
+            if (buttons[activeViewPrescriptionIndex]) {
+                buttons[activeViewPrescriptionIndex].scrollIntoView({
+                    block: "nearest"
+                });
+            }
+        }
+
+        viewPrescriptionSearch.addEventListener(
+            "input",
+            renderViewPrescriptionSuggestions
+        );
+
+        viewPrescriptionSearch.addEventListener(
+            "keydown",
+            function (event) {
+                const buttons =
+                    viewPrescriptionSuggestions.querySelectorAll("button");
+
+                if (
+                    event.key === "ArrowDown" &&
+                    !viewPrescriptionSuggestions.hidden &&
+                    buttons.length
+                ) {
+                    event.preventDefault();
+                    activeViewPrescriptionIndex =
+                        (activeViewPrescriptionIndex + 1) % buttons.length;
+                    updateViewPrescriptionActive();
+                } else if (
+                    event.key === "ArrowUp" &&
+                    !viewPrescriptionSuggestions.hidden &&
+                    buttons.length
+                ) {
+                    event.preventDefault();
+                    activeViewPrescriptionIndex =
+                        (activeViewPrescriptionIndex - 1 + buttons.length) %
+                        buttons.length;
+                    updateViewPrescriptionActive();
+                } else if (
+                    event.key === "Enter" &&
+                    !viewPrescriptionSuggestions.hidden &&
+                    activeViewPrescriptionIndex >= 0 &&
+                    matchingViewPrescriptions[activeViewPrescriptionIndex]
+                ) {
+                    event.preventDefault();
+                    selectViewPrescription(
+                        matchingViewPrescriptions[
+                            activeViewPrescriptionIndex
+                            ]
+                    );
+                } else if (event.key === "Escape") {
+                    closeViewPrescriptionSuggestions();
+                }
+            }
+        );
+
+        document.addEventListener("click", function (event) {
+            if (!viewPrescriptionForm.contains(event.target)) {
+                closeViewPrescriptionSuggestions();
+            }
+        });
+
+        viewPrescriptionForm.addEventListener(
+            "submit",
+            function (event) {
+                const validSelection = prescriptionRecords.some(
+                    p => String(p.id) === viewPrescriptionId.value
+                );
+
+                if (!validSelection) {
+                    event.preventDefault();
+                    viewPrescriptionMessage.textContent =
+                        "Please select a prescription from the suggestions.";
+                    viewPrescriptionMessage.className =
+                        "form-text text-danger";
+                    viewPrescriptionSearch.focus();
+                }
+            }
+        );
+
+        // Search the Existing Prescriptions table.
+        const existingSearch =
+            document.getElementById("existingPrescriptionSearch");
+        const existingCount =
+            document.getElementById("existingPrescriptionCount");
+        const clearExistingSearch =
+            document.getElementById("clearExistingPrescriptionSearch");
+        const noExistingResults =
+            document.getElementById("noExistingPrescriptionResults");
+
+        const existingRows = Array.from(
+            document.querySelectorAll(".existing-prescription-row")
+        );
+
+        function filterExistingPrescriptions() {
+            const query =
+                existingSearch.value.trim().toLowerCase();
+            let visible = 0;
+
+            existingRows.forEach(row => {
+                const text =
+                    (row.dataset.search || "").toLowerCase();
+                const matches = text.includes(query);
+
+                row.hidden = !matches;
+
+                if (matches) {
+                    visible++;
+                }
+            });
+
+            existingCount.textContent =
+                `Showing ${visible} of ${existingRows.length} prescriptions`;
+
+            if (noExistingResults) {
+                noExistingResults.hidden = visible !== 0;
+            }
+        }
+
+        existingSearch.addEventListener(
+            "input", filterExistingPrescriptions
+        );
+
+        clearExistingSearch.addEventListener("click", function () {
+            existingSearch.value = "";
+            filterExistingPrescriptions();
+            existingSearch.focus();
+        });
+
+        filterExistingPrescriptions();
+    });
+</script>
+}

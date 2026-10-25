@@ -1,0 +1,420 @@
+@page
+@model ClinicManagementWeb.Pages.MedicalHistoryModel
+
+@{
+    ViewData["Title"] = "Medical History";
+}
+
+<div class="container mt-4 medical-history-page">
+    <div class="medical-history-header">
+        <div>
+            <h1>Medical History</h1>
+            <p>Manage patient diagnoses, treatments, and clinical notes.</p>
+        </div>
+    </div>
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"
+                    aria-label="Close"></button>
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"
+                    aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="medical-history-panel">
+        <div class="medical-history-panel-header">
+            <h5 class="mb-0">
+                @(Model.MedicalHistoryId > 0
+                    ? "Edit Medical Record"
+                    : "Create Medical Record")
+            </h5>
+        </div>
+
+        <div class="medical-history-panel-body">
+            <form method="post"
+                  asp-page-handler="@(Model.MedicalHistoryId > 0 ? "Update" : "")">
+
+                @if (Model.MedicalHistoryId > 0)
+                {
+                    <input type="hidden" asp-for="MedicalHistoryId" />
+                }
+                <div asp-validation-summary="ModelOnly"
+                     class="text-danger mb-3"></div>
+
+                
+                <div class="mb-3" id="appointmentAutocomplete">
+                    <label for="appointmentSearchInput" class="form-label">
+                        Appointment
+                    </label>
+
+                    <input type="text"
+                           id="appointmentSearchInput"
+                           class="form-control"
+                           placeholder="Search by patient, doctor, date, or appointment ID..."
+                           autocomplete="off"
+                           required />
+
+                    <input type="hidden"
+                           asp-for="Input.AppointmentId"
+                           id="selectedAppointmentId" />
+
+                    <div id="appointmentSuggestions"
+                         class="list-group mt-1 shadow-sm"
+                         hidden>
+                    </div>
+
+                    <small id="appointmentSelectionMessage"
+                           class="form-text text-muted">
+                        Type a patient name, doctor name, date, or ID, then select an appointment.
+                    </small>
+
+                    <span asp-validation-for="Input.AppointmentId"
+                          class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Input.MedicalHistoryDate"
+                           class="form-label">Medical Record Date</label>
+
+                    <input asp-for="Input.MedicalHistoryDate"
+                           type="date"
+                           class="form-control"
+                           required />
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Input.DiagnosisDetails"
+                           class="form-label">Diagnosis</label>
+
+                    <textarea asp-for="Input.DiagnosisDetails"
+                              class="form-control"
+                              rows="3"></textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Input.TreatmentDetails"
+                           class="form-label">Treatment</label>
+
+                    <textarea asp-for="Input.TreatmentDetails"
+                              class="form-control"
+                              rows="3"></textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Input.Notes"
+                           class="form-label">Additional Notes</label>
+
+                    <textarea asp-for="Input.Notes"
+                              class="form-control"
+                              rows="3"></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                    @(Model.MedicalHistoryId > 0
+                        ? "Update Medical Record"
+                        : "Save Medical Record")
+                </button>
+
+                @if (Model.MedicalHistoryId > 0)
+                {
+                    <a asp-page="/MedicalHistory" class="btn btn-secondary">
+                        Cancel
+                    </a>
+                }
+            </form>
+        </div>
+    </div>
+
+    <h2 class="h4 mb-3">Medical Records</h2>
+
+    <div class="medical-history-table-wrap">
+        <table class="table align-middle medical-history-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Patient</th>
+                    <th>Doctor</th>
+                    <th>Appointment Date</th>
+                    <th>Record Date</th>
+                    <th>Diagnosis</th>
+                    <th>Treatment</th>
+                    <th>Notes</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @if (Model.Records.Count == 0)
+                {
+                    <tr>
+                        <td colspan="9" class="text-center text-muted">
+                            No medical records found.
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var record in Model.Records)
+                    {
+                        <tr>
+                            <td class="medical-record-id">@record.MedicalHistoryId</td>
+                            <td>@record.PatientName</td>
+                            <td>@record.DoctorName</td>
+                            <td>@record.AppointmentDate.ToString("dd/MM/yyyy")</td>
+                            <td>
+                                @(record.MedicalHistoryDate?.ToString("dd/MM/yyyy") ?? "—")
+                            </td>
+                            <td class="medical-record-text">@(record.DiagnosisDetails ?? "—")</td>
+                            <td class="medical-record-text">@(record.TreatmentDetails ?? "—")</td>
+                            <td class="medical-record-text">@(record.Notes ?? "—")</td>
+                            
+                            <td>
+                                <div class="medical-record-actions">
+                                    <form method="post" asp-page-handler="Edit">
+                                        <input type="hidden" name="id"
+                                               value="@record.MedicalHistoryId" />
+                                        <button type="submit" class="btn btn-warning btn-sm">
+                                            Edit
+                                        </button>
+                                    </form>
+
+                                    <form method="post" asp-page-handler="Delete"
+                                          onsubmit="return confirm('Are you sure you want to delete this medical record?');">
+                                        <input type="hidden" name="id"
+                                               value="@record.MedicalHistoryId" />
+                                        <button type="submit" class="btn btn-danger btn-sm">
+                                            Delete
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const appointments = @Html.Raw(
+                System.Text.Json.JsonSerializer.Serialize(
+                    Model.Appointments.Select(a => new
+                    {
+                        id = a.AppointmentId,
+                        patient = a.PatientName,
+                        doctor = a.DoctorName,
+                        date = a.AppointmentDate.ToString("dd/MM/yyyy"),
+                        time = a.AppointmentTime.ToString()
+                    })
+                )
+            );
+
+            const container =
+                document.getElementById("appointmentAutocomplete");
+            const searchInput =
+                document.getElementById("appointmentSearchInput");
+            const selectedId =
+                document.getElementById("selectedAppointmentId");
+            const suggestions =
+                document.getElementById("appointmentSuggestions");
+            const message =
+                document.getElementById("appointmentSelectionMessage");
+            const form = container.closest("form");
+
+            let matches = [];
+            let activeIndex = -1;
+
+            function closeSuggestions() {
+                suggestions.hidden = true;
+                activeIndex = -1;
+            }
+
+            function displayAppointment(appointment) {
+                const doctorName = appointment.doctor.replace(/^(Dr\.\s*)+/i, "");
+                return `#${appointment.id} — ${appointment.patient} — Dr. ${doctorName}`;
+            }
+
+            function selectAppointment(appointment) {
+                selectedId.value = appointment.id;
+                searchInput.value = displayAppointment(appointment);
+
+                message.textContent =
+                    `Selected: ${appointment.date} at ${appointment.time}`;
+                message.className = "form-text text-success";
+
+                closeSuggestions();
+            }
+
+            function updateActiveSuggestion() {
+                const buttons = suggestions.querySelectorAll("button");
+
+                buttons.forEach((button, index) => {
+                    button.classList.toggle("active", index === activeIndex);
+                });
+
+                if (buttons[activeIndex]) {
+                    buttons[activeIndex].scrollIntoView({
+                        block: "nearest"
+                    });
+                }
+            }
+
+            function renderSuggestions() {
+                const query = searchInput.value.trim().toLowerCase();
+
+                // Clear the previous selection whenever the user types.
+                selectedId.value = "";
+                suggestions.replaceChildren();
+                matches = [];
+                activeIndex = -1;
+
+                message.textContent = "Choose an appointment from the suggestions.";
+                message.className = "form-text text-muted";
+
+                if (!query) {
+                    closeSuggestions();
+                    message.textContent =
+                        "Type a patient name, doctor name, date, or ID, then select an appointment.";
+                    return;
+                }
+
+                matches = appointments.filter(appointment => {
+                    const searchableText = [
+                        appointment.id,
+                        appointment.patient,
+                        appointment.doctor,
+                        appointment.date,
+                        appointment.time
+                    ].join(" ").toLowerCase();
+
+                    return searchableText.includes(query);
+                }).slice(0, 10);
+
+                if (matches.length === 0) {
+                    const empty = document.createElement("div");
+                    empty.className = "list-group-item text-muted";
+                    empty.textContent = "No matching appointments found.";
+
+                    suggestions.appendChild(empty);
+                    suggestions.hidden = false;
+                    return;
+                }
+
+                matches.forEach((appointment, index) => {
+                    const button = document.createElement("button");
+                    button.type = "button";
+                    button.className =
+                        "list-group-item list-group-item-action";
+
+                    const title = document.createElement("div");
+                    title.className = "fw-semibold";
+                    title.textContent = displayAppointment(appointment);
+
+                    const details = document.createElement("small");
+                    details.className = "d-block text-muted";
+                    details.textContent =
+                        `Date: ${appointment.date} · Time: ${appointment.time}`;
+
+                    button.append(title, details);
+
+                    button.addEventListener("click", function () {
+                        selectAppointment(appointment);
+                    });
+
+                    button.addEventListener("mouseenter", function () {
+                        activeIndex = index;
+                        updateActiveSuggestion();
+                    });
+
+                    suggestions.appendChild(button);
+                });
+
+                suggestions.hidden = false;
+            }
+
+            searchInput.addEventListener("input", renderSuggestions);
+
+            searchInput.addEventListener("keydown", function (event) {
+                const buttons = suggestions.querySelectorAll("button");
+
+                if (event.key === "ArrowDown" && !suggestions.hidden) {
+                    event.preventDefault();
+
+                    if (buttons.length) {
+                        activeIndex = (activeIndex + 1) % buttons.length;
+                        updateActiveSuggestion();
+                    }
+                } else if (
+                    event.key === "ArrowUp" && !suggestions.hidden
+                ) {
+                    event.preventDefault();
+
+                    if (buttons.length) {
+                        activeIndex =
+                            (activeIndex - 1 + buttons.length) % buttons.length;
+                        updateActiveSuggestion();
+                    }
+                } else if (
+                    event.key === "Enter" &&
+                    !suggestions.hidden &&
+                    activeIndex >= 0 &&
+                    matches[activeIndex]
+                ) {
+                    event.preventDefault();
+                    selectAppointment(matches[activeIndex]);
+                } else if (event.key === "Escape") {
+                    closeSuggestions();
+                }
+            });
+
+            document.addEventListener("click", function (event) {
+                if (!container.contains(event.target)) {
+                    closeSuggestions();
+                }
+            });
+
+            form.addEventListener("submit", function (event) {
+                const validSelection = appointments.some(
+                    appointment =>
+                        String(appointment.id) === selectedId.value
+                );
+
+                if (!validSelection) {
+                    event.preventDefault();
+                    message.textContent =
+                        "Please select an appointment from the suggestions.";
+                    message.className = "form-text text-danger";
+                    searchInput.focus();
+                }
+            });
+
+            // Restore the selected appointment when editing or when
+            // the page returns with validation errors.
+            const initialAppointment = appointments.find(
+                appointment => String(appointment.id) === selectedId.value
+            );
+
+            if (initialAppointment) {
+                searchInput.value = displayAppointment(initialAppointment);
+                message.textContent =
+                    `Selected: ${initialAppointment.date} at ${initialAppointment.time}`;
+                message.className = "form-text text-success";
+            }
+        });
+    </script>
+}

@@ -1,0 +1,247 @@
+﻿
+@page
+@model ClinicManagementWeb.Pages.IndexModel
+
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="container py-4 py-lg-5 clinic-dashboard">
+
+    <!-- Welcome banner -->
+    <section class="dashboard-hero mb-5">
+        <div class="dashboard-hero-content">
+            <div class="dashboard-eyebrow">
+                <span class="dashboard-status-dot"></span>
+                CLINIC MANAGEMENT SYSTEM
+            </div>
+
+            <h1>Welcome to CarePoint</h1>
+
+            <p>
+                Your central workspace for managing patients, coordinating
+                appointments, maintaining medical records, and tracking medicine inventory.
+            </p>
+
+            <div class="dashboard-hero-actions">
+                <a asp-page="/Appointments" class="btn dashboard-primary-btn">
+                    <span aria-hidden="true">＋</span>
+                    Manage appointments
+                </a>
+
+                <a asp-page="/Patients" class="btn dashboard-secondary-btn">
+                    View patients
+                    <span aria-hidden="true">→</span>
+                </a>
+            </div>
+        </div>
+
+        <div class="dashboard-hero-art" aria-hidden="true">
+            <div class="dashboard-art-circle dashboard-art-circle-one"></div>
+            <div class="dashboard-art-circle dashboard-art-circle-two"></div>
+
+            <div class="dashboard-medical-symbol">
+                <svg viewBox="0 0 120 120" fill="none">
+                    <path d="M60 10 99 25v30c0 27-17 44-39 55C38 99 21 82 21 55V25L60 10Z"
+                          fill="currentColor" fill-opacity=".12"
+                          stroke="currentColor" stroke-width="3"/>
+                    <path d="M60 37v46M37 60h46"
+                          stroke="currentColor" stroke-width="9"
+                          stroke-linecap="round"/>
+                </svg>
+            </div>
+
+            <div class="dashboard-art-caption">
+                <span>Care</span>
+                <strong>Starts here.</strong>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section heading -->
+    <section class="mb-4">
+        <div class="dashboard-section-heading">
+            <div>
+                <div class="dashboard-section-eyebrow">WORKSPACE</div>
+                <h2>Clinic modules</h2>
+                <p>Choose a section to get started.</p>
+            </div>
+
+            <div class="dashboard-module-count">
+                <strong>06</strong>
+                <span>Management areas</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Module cards -->
+    <section class="row g-4">
+
+        <!-- Patients -->
+        <div class="col-md-6 col-xl-4">
+            <article class="module-card module-patients">
+                <div class="module-card-top">
+                    <div class="module-icon">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                            <circle cx="10" cy="7" r="4"/>
+                            <path d="M20 8v6m-3-3h6"/>
+                        </svg>
+                    </div>
+                    <span class="module-number">01</span>
+                </div>
+
+                <h3>Patients</h3>
+                <p>
+                    Register patients and maintain their personal information
+                    and contact details.
+                </p>
+
+                <a asp-page="/Patients" class="module-card-link">
+                    Manage patients <span aria-hidden="true">→</span>
+                </a>
+            </article>
+        </div>
+
+        <!-- Doctors -->
+        <div class="col-md-6 col-xl-4">
+            <article class="module-card module-doctors">
+                <div class="module-card-top">
+                    <div class="module-icon">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M8 3v5a4 4 0 0 0 8 0V3"/>
+                            <path d="M6 3h4m4 0h4"/>
+                            <path d="M12 12v3a4 4 0 0 0 8 0v-1"/>
+                            <circle cx="20" cy="12" r="1"/>
+                            <path d="M12 15a4 4 0 1 1-8 0v-3"/>
+                        </svg>
+                    </div>
+                    <span class="module-number">02</span>
+                </div>
+
+                <h3>Doctors</h3>
+                <p>
+                    Manage doctor profiles, contact information, and
+                    medical specialties.
+                </p>
+
+                <a asp-page="/Doctors" class="module-card-link">
+                    Manage doctors <span aria-hidden="true">→</span>
+                </a>
+            </article>
+        </div>
+
+        <!-- Appointments -->
+        <div class="col-md-6 col-xl-4">
+            <article class="module-card module-appointments">
+                <div class="module-card-top">
+                    <div class="module-icon">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <rect x="3" y="5" width="18" height="16" rx="2"/>
+                            <path d="M16 3v4M8 3v4M3 11h18"/>
+                            <path d="m9 16 2 2 4-4"/>
+                        </svg>
+                    </div>
+                    <span class="module-number">03</span>
+                </div>
+
+                <h3>Appointments</h3>
+                <p>
+                    Schedule patient visits and manage appointment
+                    dates, times, and availability.
+                </p>
+
+                <a asp-page="/Appointments" class="module-card-link">
+                    Manage appointments <span aria-hidden="true">→</span>
+                </a>
+            </article>
+        </div>
+
+        <!-- Medical History -->
+        <div class="col-md-6 col-xl-4">
+            <article class="module-card module-history">
+                <div class="module-card-top">
+                    <div class="module-icon">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M6 3h12a2 2 0 0 1 2 2v16H4V5a2 2 0 0 1 2-2Z"/>
+                            <path d="M12 8v8M8 12h8"/>
+                        </svg>
+                    </div>
+                    <span class="module-number">04</span>
+                </div>
+
+                <h3>Medical history</h3>
+                <p>
+                    Record and review diagnoses, treatments, and
+                    clinical history information.
+                </p>
+
+                <a asp-page="/MedicalHistory" class="module-card-link">
+                    View medical history <span aria-hidden="true">→</span>
+                </a>
+            </article>
+        </div>
+
+        <!-- Medicines -->
+        <div class="col-md-6 col-xl-4">
+            <article class="module-card module-medicines">
+                <div class="module-card-top">
+                    <div class="module-icon">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="m10 3 11 11a5 5 0 0 1-7 7L3 10a5 5 0 0 1 7-7Z"/>
+                            <path d="m8 8 8 8"/>
+                        </svg>
+                    </div>
+                    <span class="module-number">05</span>
+                </div>
+
+                <h3>Medicine management</h3>
+                <p>
+                    Manage medicine records, monitor available stock,
+                    and restock inventory.
+                </p>
+
+                <a asp-page="/Medicines" class="module-card-link">
+                    Manage medicines <span aria-hidden="true">→</span>
+                </a>
+            </article>
+        </div>
+
+        <!-- Prescriptions -->
+        <div class="col-md-6 col-xl-4">
+            <article class="module-card module-prescriptions">
+                <div class="module-card-top">
+                    <div class="module-icon">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M8 3h8l4 4v14H4V3h4Z"/>
+                            <path d="M16 3v5h4M8 13h8M8 17h6"/>
+                            <path d="M8 9h2"/>
+                        </svg>
+                    </div>
+                    <span class="module-number">06</span>
+                </div>
+
+                <h3>Prescriptions</h3>
+                <p>
+                    Create prescriptions and manage prescribed medicines,
+                    dosages, and instructions.
+                </p>
+
+                <a asp-page="/Prescriptions" class="module-card-link">
+                    Manage prescriptions <span aria-hidden="true">→</span>
+                </a>
+            </article>
+        </div>
+
+    </section>
+
+    <!-- Footer note -->
+    <div class="dashboard-bottom-note mt-5">
+        <span class="dashboard-note-icon" aria-hidden="true">✓</span>
+        <p>
+            <strong>Your clinic workspace</strong>
+            <span>Manage records and daily operations from one place.</span>
+        </p>
+    </div>
+
+</div>

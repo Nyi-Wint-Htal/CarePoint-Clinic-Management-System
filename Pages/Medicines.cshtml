@@ -1,0 +1,668 @@
+
+@page
+@model ClinicManagementWeb.Pages.MedicinesModel
+
+@{
+ViewData["Title"] = "Medicine Management";
+
+const int LowStockThreshold = 10;
+
+var totalMedicines = Model.MedicinesList.Count;
+var lowStockCount = Model.MedicinesList.Count(
+m => m.StockQuantity > 0 && m.StockQuantity <= LowStockThreshold);
+var outOfStockCount = Model.MedicinesList.Count(
+m => m.StockQuantity == 0);
+}
+
+<div class="container mt-4 medicines-page">
+
+    <!-- Page Header -->
+    <div class="medicines-header">
+        <div>
+            <h1>Medicine Inventory</h1>
+            <p>Manage medicine supplies, monitor stock, and restock existing items.</p>
+        </div>
+    </div>
+
+    <!-- Inventory Alerts -->
+    @if (lowStockCount > 0 || outOfStockCount > 0)
+    {
+    <div class="medicine-alert medicine-alert-warning" role="alert">
+        <div class="medicine-alert-icon">!</div>
+        <div>
+            <h5>Inventory needs attention</h5>
+            <p>
+                @if (outOfStockCount > 0)
+                {
+                <span>@outOfStockCount medicine(s) are out of stock.</span>
+                }
+                @if (outOfStockCount > 0 && lowStockCount > 0)
+                {
+                <span> </span>
+                }
+                @if (lowStockCount > 0)
+                {
+                <span>@lowStockCount medicine(s) have low stock (@LowStockThreshold units or fewer).</span>
+                }
+            </p>
+        </div>
+    </div>
+    }
+    else if (totalMedicines > 0)
+    {
+    <div class="medicine-alert medicine-alert-success" role="status">
+        <div class="medicine-alert-icon">✓</div>
+        <div>
+            <h5>Stock levels look good</h5>
+            <p>All medicines are above the low-stock threshold.</p>
+        </div>
+    </div>
+    }
+
+    <!-- Inventory Summary -->
+    <div class="row g-3 medicine-summary">
+        <div class="col-md-4">
+            <div class="medicine-stat-card">
+                <div class="medicine-stat-label">Total Medicines</div>
+                <div class="medicine-stat-value">@totalMedicines</div>
+                <div class="medicine-stat-description">Items in your inventory</div>
+                <div class="medicine-stat-icon medicine-stat-icon-teal">＋</div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="medicine-stat-card medicine-stat-low">
+                <div class="medicine-stat-label">Low Stock</div>
+                <div class="medicine-stat-value">@lowStockCount</div>
+                <div class="medicine-stat-description">1–@LowStockThreshold units remaining</div>
+                <div class="medicine-stat-icon medicine-stat-icon-amber">!</div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="medicine-stat-card medicine-stat-out">
+                <div class="medicine-stat-label">Out of Stock</div>
+                <div class="medicine-stat-value">@outOfStockCount</div>
+                <div class="medicine-stat-description">No units remaining</div>
+                <div class="medicine-stat-icon medicine-stat-icon-red">×</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Medicine -->
+    <section class="medicine-panel">
+        <div class="medicine-panel-header">
+            <div>
+                <h2>Add Medicine</h2>
+                <p>Add a new medicine to the clinic inventory.</p>
+            </div>
+        </div>
+
+        <div class="medicine-panel-body">
+            <form method="post">
+                <div asp-validation-summary="ModelOnly"
+                     class="text-danger mb-3"></div>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label asp-for="Input.Name" class="form-label">
+                            Medicine Name <span class="required-mark">*</span>
+                        </label>
+                        <input asp-for="Input.Name"
+                               class="form-control"
+                               maxlength="100"
+                               placeholder="e.g. Paracetamol"
+                               required />
+                        <span asp-validation-for="Input.Name"
+                              class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="Input.Type" class="form-label">Type</label>
+                        <input asp-for="Input.Type"
+                               class="form-control"
+                               maxlength="50"
+                               placeholder="e.g. Tablet, Capsule" />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="Input.Manufacturer" class="form-label">
+                            Manufacturer
+                        </label>
+                        <input asp-for="Input.Manufacturer"
+                               class="form-control"
+                               maxlength="100"
+                               placeholder="Enter manufacturer" />
+                    </div>
+
+                    <div class="col-md-3">
+                        <label asp-for="Input.Unit" class="form-label">Unit</label>
+                        <input asp-for="Input.Unit"
+                               class="form-control"
+                               maxlength="30"
+                               placeholder="e.g. tablet, bottle" />
+                    </div>
+
+                    <div class="col-md-3">
+                        <label asp-for="Input.StockQuantity" class="form-label">
+                            Initial Stock
+                        </label>
+                        <input asp-for="Input.StockQuantity"
+                               type="number"
+                               class="form-control"
+                               min="0"
+                               placeholder="0" />
+                        <span asp-validation-for="Input.StockQuantity"
+                              class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="medicine-form-footer">
+                    <button type="submit" class="btn medicine-btn-primary">
+                        <span aria-hidden="true">＋</span> Add Medicine
+                    </button>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <!-- Restock Medicine -->
+    <section class="medicine-panel">
+        <div class="medicine-panel-header">
+            <div>
+                <h2>Restock Medicine</h2>
+                <p>Increase the quantity of an existing medicine without creating a duplicate.</p>
+            </div>
+            <span class="medicine-section-tag">Inventory update</span>
+        </div>
+
+        <div class="medicine-panel-body">
+            <form method="post" asp-page-handler="Restock">
+                <div asp-validation-summary="All"
+                     class="text-danger mb-3"></div>
+
+                <div class="row g-3 align-items-start">
+                    <div class="col-md-8" id="restockMedicineAutocomplete">
+                        <label for="restockMedicineSearch" class="form-label">
+                            Select Medicine <span class="required-mark">*</span>
+                        </label>
+
+                        <input type="text"
+                               id="restockMedicineSearch"
+                               class="form-control"
+                               placeholder="Search by medicine name..."
+                               autocomplete="off"
+                               required
+                               disabled="@(Model.MedicinesList.Count == 0)" />
+
+                        <input type="hidden"
+                               asp-for="RestockMedicineId"
+                               id="selectedRestockMedicineId" />
+
+                        <div id="restockMedicineSuggestions"
+                             class="list-group medicine-suggestions mt-1"
+                             hidden>
+                        </div>
+
+                        <small id="restockMedicineMessage"
+                               class="form-text text-muted">
+                            Type a medicine name and select it from the suggestions.
+                        </small>
+
+                        <span asp-validation-for="RestockMedicineId"
+                              class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label asp-for="RestockQuantity" class="form-label">
+                            Quantity to Add <span class="required-mark">*</span>
+                        </label>
+
+                        <input asp-for="RestockQuantity"
+                               type="number"
+                               class="form-control"
+                               min="1"
+                               required
+                               placeholder="Enter quantity" />
+
+                        <span asp-validation-for="RestockQuantity"
+                              class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="medicine-form-footer">
+                    <button type="submit"
+                            class="btn medicine-btn-success"
+                            disabled="@(Model.MedicinesList.Count == 0)">
+                        Restock Medicine
+                    </button>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <!-- Medicine Inventory -->
+    <section class="medicine-inventory-section">
+        <div class="medicine-inventory-heading">
+            <div>
+                <h2>Medicine Inventory</h2>
+                <p>Search medicines and check their current stock status.</p>
+            </div>
+        </div>
+
+        <!-- Search and Filter -->
+        <div class="medicine-filter-panel">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-8">
+                    <label for="medicineSearch" class="form-label">
+                        Search inventory
+                    </label>
+                    <input type="search"
+                           id="medicineSearch"
+                           class="form-control"
+                           placeholder="Search by name, type, or manufacturer..."
+                           autocomplete="off" />
+                </div>
+
+                <div class="col-md-4">
+                    <div class="medicine-stock-filter">
+                        <input class="form-check-input"
+                               type="checkbox"
+                               id="inStockOnly" />
+                        <label class="form-check-label" for="inStockOnly">
+                            Show only medicines in stock
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="medicine-filter-footer">
+                <small class="text-muted"
+                       id="medicineResultCount"
+                       aria-live="polite">
+                    Showing @totalMedicines of @totalMedicines medicines
+                </small>
+
+                <button type="button"
+                        id="clearMedicineSearch"
+                        class="btn medicine-btn-outline btn-sm">
+                    Clear Filters
+                </button>
+            </div>
+        </div>
+
+        <!-- Inventory Table -->
+        <div class="medicine-table-wrap">
+            <table class="table align-middle medicine-table">
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Medicine</th>
+                    <th>Type</th>
+                    <th>Manufacturer</th>
+                    <th>Unit</th>
+                    <th>Current Stock</th>
+                    <th>Stock Status</th>
+                </tr>
+                </thead>
+
+                <tbody id="medicineTableBody">
+                @if (Model.MedicinesList.Count == 0)
+                {
+                <tr>
+                    <td colspan="7" class="text-center text-muted py-5">
+                        No medicines have been added yet.
+                    </td>
+                </tr>
+                }
+                else
+                {
+                @foreach (var medicine in Model.MedicinesList)
+                {
+                <tr class="medicine-row"
+                    data-search="@($"{medicine.Name} {medicine.Type} {medicine.Manufacturer}")"
+                    data-stock="@medicine.StockQuantity">
+
+                    <td class="medicine-id">@medicine.MedicineId</td>
+
+                    <td class="medicine-name-cell">
+                        <strong>@medicine.Name</strong>
+                    </td>
+
+                    <td>@(medicine.Type ?? "—")</td>
+                    <td>@(medicine.Manufacturer ?? "—")</td>
+                    <td>@(medicine.Unit ?? "—")</td>
+
+                    <td>
+                                    <span class="medicine-stock-number">
+                                        @medicine.StockQuantity
+                                    </span>
+                        @if (!string.IsNullOrWhiteSpace(medicine.Unit))
+                        {
+                        <span class="medicine-stock-unit">
+                                            @medicine.Unit
+                                        </span>
+                        }
+                    </td>
+
+                    <td>
+                        @if (medicine.StockQuantity == 0)
+                        {
+                        <span class="medicine-status medicine-status-out">
+                                            Out of stock
+                                        </span>
+                        }
+                        else if (medicine.StockQuantity <= LowStockThreshold)
+                        {
+                        <span class="medicine-status medicine-status-low">
+                                            Low stock
+                                        </span>
+                        }
+                        else
+                        {
+                        <span class="medicine-status medicine-status-in">
+                                            In stock
+                                        </span>
+                        }
+                    </td>
+                </tr>
+                }
+                }
+
+                @if (Model.MedicinesList.Count > 0)
+                {
+                <tr id="noMedicineResults" hidden>
+                    <td colspan="7" class="text-center text-muted py-4">
+                        No medicines match your search or filters.
+                    </td>
+                </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+
+        <p class="medicine-table-note">
+            Low-stock threshold: @LowStockThreshold units.
+        </p>
+    </section>
+</div>
+
+@section Scripts {
+<partial name="_ValidationScriptsPartial" />
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const searchInput = document.getElementById("medicineSearch");
+        const inStockOnly = document.getElementById("inStockOnly");
+        const clearButton = document.getElementById("clearMedicineSearch");
+        const resultCount = document.getElementById("medicineResultCount");
+        const noResults = document.getElementById("noMedicineResults");
+
+        const rows = Array.from(
+            document.querySelectorAll(".medicine-row")
+        );
+
+        // Restock medicine autocomplete
+        const restockForm =
+            document.getElementById("restockMedicineAutocomplete");
+        const restockSearch =
+            document.getElementById("restockMedicineSearch");
+        const selectedRestockId =
+            document.getElementById("selectedRestockMedicineId");
+        const restockSuggestions =
+            document.getElementById("restockMedicineSuggestions");
+        const restockMessage =
+            document.getElementById("restockMedicineMessage");
+        const restockQuantityInput =
+            document.getElementById("RestockQuantity");
+
+        const restockMedicines = @Html.Raw(
+        System.Text.Json.JsonSerializer.Serialize(
+        Model.MedicinesList.Select(m => new
+        {
+        id = m.MedicineId,
+        name = m.Name,
+        type = m.Type,
+        manufacturer = m.Manufacturer,
+        stock = m.StockQuantity,
+        unit = m.Unit
+        })
+        )
+        );
+
+        let restockMatches = [];
+        let restockActiveIndex = -1;
+
+        function closeRestockSuggestions() {
+            restockSuggestions.hidden = true;
+            restockActiveIndex = -1;
+        }
+
+        function selectRestockMedicine(medicine) {
+            selectedRestockId.value = medicine.id;
+            restockSearch.value = medicine.name;
+
+            restockMessage.textContent =
+                `Selected: ${medicine.name}. Current stock: ${medicine.stock} ${medicine.unit || "units"}.`;
+            restockMessage.className = "form-text text-success";
+
+            closeRestockSuggestions();
+        }
+
+        function updateRestockActiveSuggestion() {
+            const buttons = restockSuggestions.querySelectorAll("button");
+
+            buttons.forEach((button, index) => {
+                button.classList.toggle(
+                    "active",
+                    index === restockActiveIndex
+                );
+            });
+
+            if (buttons[restockActiveIndex]) {
+                buttons[restockActiveIndex].scrollIntoView({
+                    block: "nearest"
+                });
+            }
+        }
+
+        function renderRestockSuggestions() {
+            const query = restockSearch.value.trim().toLowerCase();
+
+            // Typing invalidates the previous medicine selection.
+            selectedRestockId.value = "";
+            restockSuggestions.replaceChildren();
+            restockMatches = [];
+            restockActiveIndex = -1;
+
+            restockMessage.textContent =
+                "Choose a medicine from the suggestions.";
+            restockMessage.className = "form-text text-muted";
+
+            if (!query) {
+                closeRestockSuggestions();
+                restockMessage.textContent =
+                    "Type a medicine name and select it from the suggestions.";
+                return;
+            }
+
+            restockMatches = restockMedicines.filter(medicine => {
+                const searchableText = [
+                    medicine.id,
+                    medicine.name,
+                    medicine.type,
+                    medicine.manufacturer
+                ].join(" ").toLowerCase();
+
+                return searchableText.includes(query);
+            }).slice(0, 10);
+
+            if (restockMatches.length === 0) {
+                const empty = document.createElement("div");
+                empty.className = "list-group-item text-muted";
+                empty.textContent = "No matching medicines found.";
+
+                restockSuggestions.appendChild(empty);
+                restockSuggestions.hidden = false;
+                return;
+            }
+
+            restockMatches.forEach((medicine, index) => {
+                const button = document.createElement("button");
+                button.type = "button";
+                button.className =
+                    "list-group-item list-group-item-action";
+
+                const title = document.createElement("div");
+                title.className = "fw-semibold";
+                title.textContent = medicine.name;
+
+                const details = document.createElement("small");
+                details.className = "d-block text-muted";
+                details.textContent =
+                    `${medicine.type || "Type not specified"} · Stock: ${medicine.stock} ${medicine.unit || ""} · ${medicine.manufacturer || "Manufacturer not specified"}`;
+
+                button.append(title, details);
+
+                button.addEventListener("click", function () {
+                    selectRestockMedicine(medicine);
+                });
+
+                button.addEventListener("mouseenter", function () {
+                    restockActiveIndex = index;
+                    updateRestockActiveSuggestion();
+                });
+
+                restockSuggestions.appendChild(button);
+            });
+
+            restockSuggestions.hidden = false;
+        }
+
+        restockSearch.addEventListener("input", renderRestockSuggestions);
+
+        restockSearch.addEventListener("keydown", function (event) {
+            const buttons = restockSuggestions.querySelectorAll("button");
+
+            if (event.key === "ArrowDown" &&
+                !restockSuggestions.hidden) {
+                event.preventDefault();
+
+                if (buttons.length > 0) {
+                    restockActiveIndex =
+                        (restockActiveIndex + 1) % buttons.length;
+                    updateRestockActiveSuggestion();
+                }
+            } else if (event.key === "ArrowUp" &&
+                !restockSuggestions.hidden) {
+                event.preventDefault();
+
+                if (buttons.length > 0) {
+                    restockActiveIndex =
+                        (restockActiveIndex - 1 + buttons.length) %
+                        buttons.length;
+                    updateRestockActiveSuggestion();
+                }
+            } else if (event.key === "Enter" &&
+                !restockSuggestions.hidden &&
+                restockActiveIndex >= 0 &&
+                restockMatches[restockActiveIndex]) {
+                event.preventDefault();
+                selectRestockMedicine(
+                    restockMatches[restockActiveIndex]
+                );
+            } else if (event.key === "Escape") {
+                closeRestockSuggestions();
+            }
+        });
+
+        document.addEventListener("click", function (event) {
+            if (!restockForm.contains(event.target)) {
+                closeRestockSuggestions();
+            }
+        });
+
+        // Require a medicine selected from the suggestions.
+        restockForm.closest("form").addEventListener(
+            "submit",
+            function (event) {
+                const validSelection = restockMedicines.some(
+                    medicine =>
+                        String(medicine.id) === selectedRestockId.value
+                );
+
+                if (!validSelection) {
+                    event.preventDefault();
+                    restockMessage.textContent =
+                        "Please select a medicine from the suggestions.";
+                    restockMessage.className = "form-text text-danger";
+                    restockSearch.focus();
+                    return;
+                }
+
+                if (!restockQuantityInput.value ||
+                    !Number.isInteger(Number(restockQuantityInput.value)) ||
+                    Number(restockQuantityInput.value) <= 0) {
+                    event.preventDefault();
+                    restockQuantityInput.focus();
+                }
+            }
+        );
+
+        // Restore the selected medicine if the form returns with errors.
+        const initialRestockMedicine = restockMedicines.find(
+            medicine =>
+                String(medicine.id) === selectedRestockId.value
+        );
+
+        if (initialRestockMedicine) {
+            restockSearch.value = initialRestockMedicine.name;
+            restockMessage.textContent =
+                `Selected: ${initialRestockMedicine.name}. Current stock: ${initialRestockMedicine.stock} ${initialRestockMedicine.unit || "units"}.`;
+            restockMessage.className = "form-text text-success";
+        }
+
+        // Inventory search and stock filter
+        function filterMedicines() {
+            const query = searchInput.value.trim().toLowerCase();
+            const requireStock = inStockOnly.checked;
+            let visibleCount = 0;
+
+            rows.forEach(function (row) {
+                const searchText =
+                    (row.dataset.search || "").toLowerCase();
+                const stock = Number(row.dataset.stock);
+
+                const matchesSearch = searchText.includes(query);
+                const matchesStock = !requireStock || stock > 0;
+                const isVisible = matchesSearch && matchesStock;
+
+                row.hidden = !isVisible;
+
+                if (isVisible) {
+                    visibleCount++;
+                }
+            });
+
+            if (noResults) {
+                noResults.hidden = visibleCount !== 0;
+            }
+
+            resultCount.textContent =
+                `Showing ${visibleCount} of ${rows.length} medicines`;
+        }
+
+        searchInput.addEventListener("input", filterMedicines);
+        inStockOnly.addEventListener("change", filterMedicines);
+
+        clearButton.addEventListener("click", function () {
+            searchInput.value = "";
+            inStockOnly.checked = false;
+            filterMedicines();
+            searchInput.focus();
+        });
+
+        filterMedicines();
+    });
+</script>
+}
